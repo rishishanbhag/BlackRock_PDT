@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  background-color: #fafafa;
+}
+
+body {
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: #111827;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv11', 'ss01', 'ss03';
+}
+
+::selection {
+  background-color: #111827;
+  color: #ffffff;
+}
+
+/* Soft scrollbar tuned to the light TaskPulse-style surface */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: #f9fafb;
+}
+*::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #d1d5db;
+}
+
+/* Recharts tooltip skin — light card with subtle border */
+.recharts-default-tooltip {
+  background-color: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 8px !important;
+  color: #111827 !important;
+  box-shadow: 0 8px 24px -6px rgba(16, 24, 40, 0.1), 0 2px 4px rgba(16, 24, 40, 0.04);
+}
+.recharts-tooltip-label {
+  color: #6b7280 !important;
+  font-size: 11px !important;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.recharts-tooltip-item {
+  color: #111827 !important;
+  font-size: 12px !important;
+}
+.recharts-cartesian-axis-tick text {
+  fill: #9ca3af;
+  font-size: 11px;
+}
+.recharts-legend-item-text {
+  color: #6b7280 !important;
+  font-size: 12px !important;
+}
+
+.mono {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* TaskPulse-style faint grid backdrop on the off-white base */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(17, 24, 39, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(17, 24, 39, 0.045) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: -1px -1px;
+}
+
+/* Soft emerald radial wash behind the header — the "live system" feel */
+.glow-emerald {
+  background:
+    radial-gradient(900px circle at 85% -10%, rgba(16, 185, 129, 0.08), transparent 55%),
+    radial-gradient(700px circle at 10% -20%, rgba(59, 130, 246, 0.05), transparent 55%);
+}
