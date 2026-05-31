@@ -160,7 +160,7 @@ const KPIS = [
     delta: '-12%',
     deltaDirection: 'down',
     deltaIsGood: true,
-    sub: 'vs. last month',
+    sub: 'vs. last 30d',
     icon: 'clock',
   },
   {
@@ -169,7 +169,7 @@ const KPIS = [
     delta: '+1',
     deltaDirection: 'up',
     deltaIsGood: false,
-    sub: 'vs. last week',
+    sub: 'vs. last 30d',
     icon: 'alert',
   },
   {
@@ -178,7 +178,7 @@ const KPIS = [
     delta: '0',
     deltaDirection: 'flat',
     deltaIsGood: true,
-    sub: 'vs. last month',
+    sub: 'vs. last 30d',
     icon: 'target',
   },
 ]
@@ -199,6 +199,20 @@ function mulberry32(seed) {
 
 function formatShortDate(d) {
   return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`
+}
+
+function formatWeekLabel(d) {
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+}
+
+/** Monday of the week containing `date`. */
+function startOfWeek(date) {
+  const d = new Date(date)
+  const day = d.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  d.setDate(d.getDate() + diff)
+  d.setHours(0, 0, 0, 0)
+  return d
 }
 
 /**
@@ -251,15 +265,21 @@ function buildMttrSeries() {
 function buildIncidentVolume() {
   const rand = mulberry32(99887766)
   const weeks = 8
+  const currentWeekStart = startOfWeek(new Date())
   const out = []
-  for (let i = 1; i <= weeks; i++) {
-    if (i === weeks) {
-      out.push({ week: `Week ${i}`, P1: 2, 'P2/P3': 3 })
+
+  for (let i = 0; i < weeks; i++) {
+    const weekStart = new Date(currentWeekStart)
+    weekStart.setDate(currentWeekStart.getDate() - (weeks - 1 - i) * 7)
+    const label = formatWeekLabel(weekStart)
+
+    if (i === weeks - 1) {
+      out.push({ week: label, P1: 2, 'P2/P3': 3 })
       continue
     }
     const p1 = Math.floor(rand() * 2.4) // 0..2
     const p23 = 2 + Math.floor(rand() * 5) // 2..6
-    out.push({ week: `Week ${i}`, P1: p1, 'P2/P3': p23 })
+    out.push({ week: label, P1: p1, 'P2/P3': p23 })
   }
   return out
 }
@@ -439,9 +459,6 @@ function Header({ lastRefreshed, onRefresh, platformStatus }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <span className="mono hidden items-center gap-1.5 rounded-md border border-border-subtle bg-bg-elevated px-2 py-1 text-[11px] uppercase tracking-wider text-gray-500 md:inline-flex">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> env · prod · us-east-1
-          </span>
           <span className="mono inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-bg-elevated px-2 py-1 text-[11px] text-gray-600">
             <Icon name="refresh" className="h-3 w-3 text-gray-400" />
             Last refreshed {lastRefreshed}
@@ -533,10 +550,15 @@ function PipelineTable() {
           <tbody>
             {PIPELINES.map((p) => {
               const breached = p.uptime < p.sla
+              const statusBorder = {
+                Healthy: 'border-l-emerald-500',
+                Degraded: 'border-l-amber-500',
+                Critical: 'border-l-red-500',
+              }[p.status]
               return (
                 <tr
                   key={p.name}
-                  className={`border-b border-border-subtle/70 transition hover:bg-gray-50 ${
+                  className={`border-b border-border-subtle/70 border-l-[3px] transition hover:bg-gray-50 ${statusBorder} ${
                     breached ? 'bg-amber-50/60' : ''
                   }`}
                 >
@@ -591,7 +613,7 @@ function MttrTrendChart({ data }) {
     >
       <div className="h-72 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 8, right: 12, left: -10, bottom: 0 }}>
+          <LineChart data={data} margin={{ top: 8, right: 12, left: 4, bottom: 0 }}>
             <CartesianGrid stroke="#e5e7eb" strokeDasharray="3 3" vertical={false} />
             <XAxis
               dataKey="date"
@@ -604,7 +626,10 @@ function MttrTrendChart({ data }) {
               tickLine={false}
               axisLine={false}
               tick={{ fontSize: 11 }}
-              width={42}
+              width={48}
+              domain={[0, 160]}
+              ticks={[0, 20, 40, 60, 80, 100, 120, 140]}
+              allowDecimals={false}
               tickFormatter={(v) => `${v}m`}
             />
             <Tooltip
@@ -711,18 +736,18 @@ function IncidentsTable() {
       }
       delay={600}
     >
-      <div className="-mx-5 overflow-x-auto">
-        <table className="w-full min-w-[960px] border-collapse text-sm">
+      <div className="-mx-5 overflow-x-auto lg:overflow-visible">
+        <table className="w-full min-w-[960px] border-collapse text-xs lg:min-w-0">
           <thead>
-            <tr className="border-b border-border-subtle text-left text-[11px] font-medium uppercase tracking-wider text-gray-500">
-              <th className="px-5 py-2.5 font-medium">Incident</th>
-              <th className="px-3 py-2.5 font-medium">Pipeline</th>
-              <th className="px-3 py-2.5 font-medium">Severity</th>
-              <th className="px-3 py-2.5 font-medium">Description</th>
-              <th className="px-3 py-2.5 font-medium">Detected</th>
-              <th className="px-3 py-2.5 font-medium">Resolved</th>
-              <th className="px-3 py-2.5 font-medium text-right">MTTR</th>
-              <th className="px-5 py-2.5 font-medium">Status</th>
+            <tr className="border-b border-border-subtle text-left text-[10px] font-medium uppercase tracking-wider text-gray-500">
+              <th className="px-5 py-2 font-medium">Incident</th>
+              <th className="px-2 py-2 font-medium">Pipeline</th>
+              <th className="px-2 py-2 font-medium">Severity</th>
+              <th className="px-2 py-2 font-medium">Description</th>
+              <th className="px-2 py-2 font-medium">Detected</th>
+              <th className="px-2 py-2 font-medium">Resolved</th>
+              <th className="px-2 py-2 font-medium text-right">MTTR</th>
+              <th className="px-5 py-2 font-medium">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -733,20 +758,20 @@ function IncidentsTable() {
                   i.status === 'Open' ? 'bg-red-50/60' : ''
                 }`}
               >
-                <td className="mono px-5 py-3 text-gray-700">{i.id}</td>
-                <td className="px-3 py-3 text-gray-800">{i.pipeline}</td>
-                <td className="px-3 py-3">
+                <td className="mono px-5 py-2 text-gray-700">{i.id}</td>
+                <td className="px-2 py-2 text-gray-800">{i.pipeline}</td>
+                <td className="px-2 py-2">
                   <SeverityBadge severity={i.severity} />
                 </td>
-                <td className="px-3 py-3 text-gray-600">{i.description}</td>
-                <td className="mono px-3 py-3 text-gray-600">{i.detected}</td>
-                <td className="mono px-3 py-3 text-gray-600">
+                <td className="px-2 py-2 text-gray-600">{i.description}</td>
+                <td className="mono whitespace-nowrap px-2 py-2 text-gray-600">{i.detected}</td>
+                <td className="mono whitespace-nowrap px-2 py-2 text-gray-600">
                   {i.resolved === 'Open' ? <span className="font-medium text-red-600">Open</span> : i.resolved}
                 </td>
-                <td className="mono px-3 py-3 text-right tabular-nums text-gray-700">
+                <td className="mono px-2 py-2 text-right tabular-nums text-gray-700">
                   {i.mttr ? `${i.mttr} m` : <span className="text-gray-400">—</span>}
                 </td>
-                <td className="px-5 py-3">
+                <td className="px-5 py-2">
                   <StatusBadge status={i.status} />
                 </td>
               </tr>
@@ -771,7 +796,7 @@ function Footer() {
           <span className="font-medium text-gray-800">Rishi</span>
           <span className="text-gray-300">·</span>
           <a
-            href="https://www.linkedin.com/in/your-handle"
+            href="https://www.linkedin.com/in/rishi-shanbhag/"
             target="_blank"
             rel="noreferrer"
             className="text-emerald-600 transition hover:text-emerald-700"
